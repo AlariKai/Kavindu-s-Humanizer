@@ -81,7 +81,26 @@ STYLE_PROMPTS = {
             raise HTTPException(status_code=502, detail=f"Ollama error: {e}")
     
         return {"humanized": pass2}
+import re
 
+def post_clean(text: str) -> str:
+    # Force contractions on common expansions
+    contractions = {
+        r"\bdo not\b": "don't", r"\bcannot\b": "can't",
+        r"\bwill not\b": "won't", r"\bit is\b": "it's",
+        r"\bthey are\b": "they're", r"\bwe are\b": "we're",
+        r"\byou are\b": "you're", r"\bis not\b": "isn't",
+    }
+    for pat, rep in contractions.items():
+        text = re.sub(pat, rep, text, flags=re.IGNORECASE)
+
+    # Kill formulaic connectors at sentence starts
+    text = re.sub(r"(?<=[.!?])\s+(Furthermore|Moreover|Additionally|In conclusion|It is important to note),?\s+", " ", text)
+
+    # Collapse triple spaces
+    text = re.sub(r" {2,}", " ", text)
+    return text.strip()
+    
 @app.get("/")
 async def root():
     return FileResponse(BASE / "static" / "index.html")
