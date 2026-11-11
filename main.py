@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 
 import httpx
@@ -48,43 +49,7 @@ STYLE_PROMPTS = {
 }
 
 
-@app.post("/api/humanize")
-    async def humanize(req: HumanizeRequest):
-        if not req.text.strip():
-            raise HTTPException(status_code=400, detail="text is empty")
-    
-        system = STYLE_PROMPTS.get(req.style, STYLE_PROMPTS["natural"])
-    
-        async def run_pass(text: str, temp: float) -> str:
-            prompt = f"{system}\n\n---\n{text}\n---"
-            payload = {
-                "model": MODEL,
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    "temperature": temp,
-                    "top_p": 0.95,
-                    "top_k": 0,
-                    "repeat_penalty": 1.0,
-                    "num_predict": 2048,
-                },
-            }
-            async with httpx.AsyncClient(timeout=180.0) as client:
-                r = await client.post(f"{OLLAMA_URL}/api/generate", json=payload)
-                r.raise_for_status()
-                return r.json().get("response", "").strip()
-    
-        try:
-            pass1 = await run_pass(req.text, 1.1)
-            pass2 = await run_pass(pass1, 1.2)
-        except httpx.HTTPError as e:
-            raise HTTPException(status_code=502, detail=f"Ollama error: {e}")
-    
-        return {"humanized": pass2}
-import re
-
 def post_clean(text: str) -> str:
-    # Force contractions on common expansions
     contractions = {
         r"\bdo not\b": "don't", r"\bcannot\b": "can't",
         r"\bwill not\b": "won't", r"\bit is\b": "it's",
@@ -94,13 +59,50 @@ def post_clean(text: str) -> str:
     for pat, rep in contractions.items():
         text = re.sub(pat, rep, text, flags=re.IGNORECASE)
 
-    # Kill formulaic connectors at sentence starts
-    text = re.sub(r"(?<=[.!?])\s+(Furthermore|Moreover|Additionally|In conclusion|It is important to note),?\s+", " ", text)
-
-    # Collapse triple spaces
+    text = re.sub(
+        r"(?<=[.!?])\s+(Furthermore|Moreover|Additionally|In conclusion|It is important to note),?\s+",
+        " ",
+        text,
+    )
     text = re.sub(r" {2,}", " ", text)
     return text.strip()
-    
+
+
+@app.post("/api/humanize")
+async def humanize(req: HumanizeRequest):
+    if not req.text.strip():
+        raise HTTPException(status_code=400, detail="text is empty")
+
+    system = STYLE_PROMPTS.get(req.style, STYLE_PROMPTS["natural"])
+
+    async def run_pass(text: str, temp: float) -> str:
+        prompt = f"{system}\n\n---\n{text}\n---"
+        payload = {
+            "model": MODEL,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": temp,
+                "top_p": 0.95,
+                "top_k": 0,
+                "repeat_penalty": 1.0,
+                "num_predict": 2048,
+            },
+        }
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            r = await client.post(f"{OLLAMA_URL}/api/generate", json=payload)
+            r.raise_for_status()
+            return r.json().get("response", "").strip()
+
+    try:
+        pass1 = await run_pass(req.text, 1.1)
+        pass2 = await run_pass(pass1, 1.2)
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Ollama error: {e}")
+
+    return {"humanized": post_clean(pass2)}
+
+
 @app.get("/")
 async def root():
     return FileResponse(BASE / "static" / "index.html")
