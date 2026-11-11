@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Local Humanizer</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: #0b0d10; color: #e6e6e6;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    width: 100%; max-width: 900px;
+    background: #12161b; border: 1px solid #232a33;
+    border-radius: 14px; padding: 28px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  h1 { font-size: 1.4rem; margin: 0 0 6px; letter-spacing: -.02em; }
+  .sub { color: #8a93a0; font-size: .85rem; margin-bottom: 20px; }
+  label { display: block; font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: #8a93a0; margin: 16px 0 6px; }
+  textarea {
+    width: 100%; min-height: 160px; resize: vertical;
+    background: #0b0d10; color: #e6e6e6;
+    border: 1px solid #2a323d; border-radius: 10px;
+    padding: 12px; font-size: .95rem; line-height: 1.5;
+    font-family: inherit;
+  }
+  select {
+    background: #0b0d10; color: #e6e6e6;
+    border: 1px solid #2a323d; border-radius: 10px;
+    padding: 10px 12px; font-size: .95rem;
+  }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  button {
+    background: #2563eb; color: white; border: 0;
+    border-radius: 10px; padding: 12px 22px;
+    font-size: .95rem; font-weight: 600; cursor: pointer;
+    transition: background .15s;
+  }
+  button:hover { background: #1d4ed8; }
+  button:disabled { background: #2a323d; color: #6b7280; cursor: not-allowed; }
+  .out {
+    min-height: 140px; margin-top: 8px;
+    background: #0b0d10; border: 1px solid #2a323d;
+    border-radius: 10px; padding: 12px;
+    white-space: pre-wrap; line-height: 1.6; font-size: .95rem;
+  }
+  .err { color: #f87171; font-size: .85rem; margin-top: 8px; min-height: 1.2em; }
+  .hint { color: #6b7280; font-size: .75rem; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Local Humanizer</h1>
+  <div class="sub">Runs entirely on your machine via Ollama. Nothing leaves localhost.</div>
+
+  <label for="input">Input text</label>
+  <textarea id="input" placeholder="Paste AI-generated text here..."></textarea>
+
+  <div class="row" style="margin-top:16px;">
+    <div>
+      <label for="style" style="margin-top:0;">Style</label>
+      <select id="style">
+        <option value="natural">Natural</option>
+        <option value="casual">Casual</option>
+        <option value="formal">Formal</option>
+      </select>
+    </div>
+    <div style="flex:1;"></div>
+    <button id="go">Humanize</button>
+  </div>
+
+  <div class="hint">Make sure Ollama is running: <code>ollama serve</code> and a model is pulled: <code>ollama pull llama3.2</code></div>
+
+  <label for="out" style="margin-top:20px;">Output</label>
+  <div id="out" class="out"></div>
+  <div id="err" class="err"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const go = $("go"), input = $("input"), out = $("out"), err = $("err"), style = $("style");
+
+go.addEventListener("click", async () => {
+  const text = input.value.trim();
+  if (!text) { err.textContent = "Paste some text first."; return; }
+  go.disabled = true;
+  err.textContent = "";
+  out.textContent = "Working...";
+
+  try {
+    const res = await fetch("/api/humanize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, style: style.value })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Request failed");
+    out.textContent = data.humanized;
+  } catch (e) {
+    out.textContent = "";
+    err.textContent = e.message;
+  } finally {
+    go.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
