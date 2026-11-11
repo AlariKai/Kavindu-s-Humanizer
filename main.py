@@ -22,21 +22,28 @@ class HumanizeRequest(BaseModel):
 
 STYLE_PROMPTS = {
     "natural": (
-        "Rewrite the text below so it reads like a person wrote it, not a language model. "
-        "Vary sentence length. Cut hedging, throat-clearing, and stock transitions. "
-        "Use contractions where natural. Keep every fact, name, number, and link intact. "
-        "Return only the rewritten text, no preamble."
+        "Rewrite the text below. Your goal is to destroy the statistical patterns "
+        "AI detectors look for. Follow every rule:\n"
+        "1. Vary sentence length aggressively. Put a 4-word sentence next to a 30-word one.\n"
+        "2. Never start two consecutive sentences the same way.\n"
+        "3. Use contractions everywhere a human would (don't, won't, it's, they're).\n"
+        "4. Replace predictable verbs with concrete ones: 'utilize' -> 'use', 'demonstrate' -> 'show'.\n"
+        "5. Delete any sentence that only announces what comes next ('In this section...', 'It is important to note...').\n"
+        "6. Break one long sentence into a fragment. Humans do this.\n"
+        "7. Keep every fact, number, name, and citation exactly intact.\n"
+        "Return only the rewritten text. No preamble, no explanation."
     ),
     "casual": (
-        "Rewrite the text below in a relaxed, conversational human voice. "
-        "Short sentences. Contractions. No corporate filler. "
-        "Keep all facts, names, numbers, and links intact. "
-        "Return only the rewritten text."
+        "Rewrite this like a person texting a smart friend. "
+        "Short sentences. Fragments allowed. Contractions mandatory. "
+        "Cut every formal connector. Vary rhythm hard. "
+        "Keep all facts, numbers, names intact. Return only the text."
     ),
-    "formal": (
-        "Rewrite the text below as a careful human editor would: clear, direct, "
-        "no AI stock phrases, no over-polishing. Keep all facts, names, numbers, and links intact. "
-        "Return only the rewritten text."
+    "academic": (
+        "Rewrite this as a careful human academic would, but break AI tells. "
+        "Vary sentence length. No formulaic transitions ('Furthermore', 'Moreover'). "
+        "Use concrete verbs. Keep citations, data, and claims exact. "
+        "Return only the text."
     ),
 }
 
