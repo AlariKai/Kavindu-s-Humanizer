@@ -49,36 +49,38 @@ STYLE_PROMPTS = {
 
 
 @app.post("/api/humanize")
-async def humanize(req: HumanizeRequest):
-    if not req.text.strip():
-        raise HTTPException(status_code=400, detail="text is empty")
-
-    system = STYLE_PROMPTS.get(req.style, STYLE_PROMPTS["natural"])
-    prompt = f"{system}\n\n---\n{req.text}\n---"
-
-    payload = {
-        "model": MODEL,
-        "prompt": prompt,
-        "stream": False,
-        "options": {
-            "temperature": 1.1,
-            "top_p": 0.95,
-            "top_k": 0,
-            "repeat_penalty": 1.0,
-            "num_predict": 2048,
-        },
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            r = await client.post(f"{OLLAMA_URL}/api/generate", json=payload)
-            r.raise_for_status()
-            data = r.json()
-    except httpx.HTTPError as e:
-        raise HTTPException(status_code=502, detail=f"Ollama error: {e}")
-
-    return {"humanized": data.get("response", "").strip()}
-
+    async def humanize(req: HumanizeRequest):
+        if not req.text.strip():
+            raise HTTPException(status_code=400, detail="text is empty")
+    
+        system = STYLE_PROMPTS.get(req.style, STYLE_PROMPTS["natural"])
+    
+        async def run_pass(text: str, temp: float) -> str:
+            prompt = f"{system}\n\n---\n{text}\n---"
+            payload = {
+                "model": MODEL,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": temp,
+                    "top_p": 0.95,
+                    "top_k": 0,
+                    "repeat_penalty": 1.0,
+                    "num_predict": 2048,
+                },
+            }
+            async with httpx.AsyncClient(timeout=180.0) as client:
+                r = await client.post(f"{OLLAMA_URL}/api/generate", json=payload)
+                r.raise_for_status()
+                return r.json().get("response", "").strip()
+    
+        try:
+            pass1 = await run_pass(req.text, 1.1)
+            pass2 = await run_pass(pass1, 1.2)
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"Ollama error: {e}")
+    
+        return {"humanized": pass2}
 
 @app.get("/")
 async def root():
