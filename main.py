@@ -61,9 +61,10 @@ async def humanize(req: HumanizeRequest):
         "prompt": prompt,
         "stream": False,
         "options": {
-            "temperature": 0.75,
-            "top_p": 0.9,
-            "repeat_penalty": 1.1,
+            "temperature": 1.1,
+            "top_p": 0.95,
+            "top_k": 0,
+            "repeat_penalty": 1.0,
             "num_predict": 2048,
         },
     }
